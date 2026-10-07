@@ -8,7 +8,7 @@ Point it at any git repo and branch; get one self-contained HTML page that shows
 - **Who uses what.** Script × package import matrix, plus "used by" links on every module.
 - **Optional written layer.** Plain-English labels for every block, a reviewed purpose for every file, groups, an overview, and a short list of things to know before changing anything.
 
-It was built to answer "what does this research repo actually do, and in what order?" on a branch you have not looked at in a month.
+It is made for research and data repos made of loose scripts: no pipeline framework, no annotations, just Python files that write files other Python files read. blockmap works out that chain from the code alone, so you can answer "what does this repo actually do, and in what order?" on a branch you have not looked at in a month.
 
 ## Quick start
 
