@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# blockmap outputs
+*.html
+!docs/*.html
+!src/blockmap/render/template.html
+blockmap-work/
+.DS_Store

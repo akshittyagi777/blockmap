@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>blockmap · main (working tree)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column (max 1180px) under a sticky section bar; wide graphs scroll in their own frame.
+   Palette: survey-map inks on cool paper. Transit blue = data in, green = data out, violet = compute, red = calls. */
+:root {
+  --bg: #f3f5f7; --surface: #ffffff; --surface-2: #eaeef2; --ink: #16202b; --muted: #5b6876; --line: #d6dde4;
+  --accent: #2456c7; --call: #c8432b;
+  --r-setup: #8b96a3; --r-helper: #5f7189; --r-load: #2456c7; --r-compute: #7a3fb8; --r-save: #217a55; --r-plot: #b57509; --r-entry: #16202b;
+  --s-core: #217a55; --s-auxiliary: #b57509; --s-dormant: #8b96a3; --s-library: #7a3fb8; --s-test: #4f7fa6;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11161c; --surface: #19212a; --surface-2: #222c37; --ink: #e6ecf2; --muted: #9aa8b6; --line: #313d4a;
+  --accent: #7ea6ff; --call: #ff8a70;
+  --r-setup: #7f8b98; --r-helper: #93a5bd; --r-load: #7ea6ff; --r-compute: #c59bff; --r-save: #5fd1a2; --r-plot: #f0bd5a; --r-entry: #e6ecf2;
+  --s-core: #5fd1a2; --s-auxiliary: #f0bd5a; --s-dormant: #7f8b98; --s-library: #c59bff; --s-test: #8ec0e6;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #11161c; --surface: #19212a; --surface-2: #222c37; --ink: #e6ecf2; --muted: #9aa8b6; --line: #313d4a;
+  --accent: #7ea6ff; --call: #ff8a70;
+  --r-setup: #7f8b98; --r-helper: #93a5bd; --r-load: #7ea6ff; --r-compute: #c59bff; --r-save: #5fd1a2; --r-plot: #f0bd5a; --r-entry: #e6ecf2;
+  --s-core: #5fd1a2; --s-auxiliary: #f0bd5a; --s-dormant: #7f8b98; --s-library: #c59bff; --s-test: #8ec0e6;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); margin: 0; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 80px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 26px; font-weight: 700; }
+h3 { font-size: 18px; font-weight: 600; }
+p { margin: 0; max-width: 72ch; }
+code { font-family: var(--f-mono); font-size: 0.88em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hero { display: grid; gap: 14px; padding-block: 8px 26px; border-bottom: 1px solid var(--line); }
+.eyebrow { font: 500 12px/1.4 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); overflow-wrap: anywhere; }
+.lede { font-size: 17px; color: var(--muted); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px; color: var(--muted); }
+.facts b { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+.banner { font-size: 13.5px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; }
+nav.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); margin-inline: -20px; padding: 10px 20px; display: flex; gap: 6px; overflow-x: auto; }
+nav.bar a { flex: none; font-size: 13px; text-decoration: none; color: var(--ink); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+nav.bar a:hover { border-color: var(--accent); }
+section { padding-block: 40px 8px; display: grid; gap: 16px; }
+.sub { color: var(--muted); max-width: 78ch; }
+.frame { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; padding: 14px; }
+.frame svg { display: block; max-width: none; height: auto; }
+.concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.concepts div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.concepts b { display: block; font-family: var(--f-mono); font-size: 13px; }
+.concepts span { font-size: 14px; color: var(--muted); }
+/* graph */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); align-items: center; }
+.sw { display: inline-block; width: 22px; height: 12px; border-radius: 4px; vertical-align: -1px; margin-right: 6px; border: 1.5px solid; }
+svg text { fill: var(--ink); font-family: var(--f-body); }
+svg .mono { font-family: var(--f-mono); }
+.g .edge { fill: none; stroke: var(--muted); stroke-width: 1.2; opacity: 0.5; transition: opacity .15s; }
+.g .node rect { stroke-width: 1.6; transition: opacity .15s; }
+.g .node text { font-size: 11.5px; pointer-events: none; transition: opacity .15s; }
+.g .node.script { cursor: pointer; }
+.g .node.script rect { fill: var(--surface); }
+.g .node.artifact rect { fill: var(--surface-2); stroke: var(--line); }
+.g .node.source rect { fill: color-mix(in srgb, var(--accent) 8%, var(--surface)); stroke: var(--accent); stroke-dasharray: 3 3; }
+.g .lane { fill: none; stroke: var(--line); stroke-dasharray: 2 5; }
+.g .lane-lbl { font: 600 11px var(--f-mono); fill: var(--muted); letter-spacing: 0.06em; }
+.g.hovering .edge { opacity: 0.07; }
+.g.hovering .node rect, .g.hovering .node text { opacity: 0.22; }
+.g.hovering .edge.on { opacity: 1; stroke: var(--call); stroke-width: 2; }
+.g.hovering .node.on rect, .g.hovering .node.on text { opacity: 1; }
+/* run order */
+.run { display: grid; gap: 6px; }
+ol.steps { list-style: none; padding: 0; margin: 0; counter-reset: s; }
+ol.steps li { counter-increment: s; display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding-block: 8px; border-top: 1px solid var(--line); }
+ol.steps li::before { content: counter(s); font: 600 14px var(--f-mono); color: var(--accent); text-align: right; }
+ol.steps li > div { min-width: 0; }
+.tag { font: 500 11px var(--f-mono); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; }
+/* tables */
+table.t { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.t th, table.t td { padding: 5px 10px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+table.t th:first-child, table.t td:first-child { text-align: left; font-family: var(--f-mono); font-size: 12.5px; }
+table.t thead th { font: 600 11.5px var(--f-mono); color: var(--muted); }
+table.t td.wrap { white-space: normal; text-align: left; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--r-compute); }
+/* cards */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { font: 13px var(--f-body); padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.group-h { padding-top: 22px; display: grid; gap: 4px; }
+.group-h p { color: var(--muted); font-size: 14px; }
+.pill { font: 500 11px/1 var(--f-mono); padding: 4px 8px; border-radius: 999px; color: var(--surface); white-space: nowrap; background: var(--sc); }
+details.file { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+details.file > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; gap: 6px; }
+details.file > summary::-webkit-details-marker { display: none; }
+details.file[open] > summary { border-bottom: 1px solid var(--line); }
+.f-top { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.f-name { font: 600 15px var(--f-mono); overflow-wrap: anywhere; }
+.f-meta { font: 12px var(--f-mono); color: var(--muted); }
+.f-purpose { color: var(--muted); font-size: 14.5px; }
+.f-body { padding: 14px 16px 18px; display: grid; gap: 14px; }
+.io-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.io-k { font: 600 11px var(--f-mono); letter-spacing: 0.06em; color: var(--muted); width: 64px; flex: none; }
+.chip { font: 12px var(--f-mono); padding: 2px 8px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); overflow-wrap: anywhere; }
+.chip.in { border-color: color-mix(in srgb, var(--r-load) 55%, var(--line)); }
+.chip.out { border-color: color-mix(in srgb, var(--r-save) 55%, var(--line)); }
+a.chip { color: var(--ink); text-decoration: none; }
+.notes { margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink); display: grid; gap: 4px; }
+.notes-h { font: 600 11px var(--f-mono); letter-spacing: 0.06em; color: var(--call); }
+.blocks { position: relative; padding-left: 70px; display: grid; gap: 6px; }
+.blocks svg.arcs { position: absolute; left: 0; top: 0; width: 70px; height: 100%; overflow: visible; pointer-events: none; }
+.arcs path { fill: none; stroke: var(--call); stroke-width: 1.3; opacity: 0.75; }
+.blk { display: grid; grid-template-columns: 96px 1fr; gap: 12px; border-left: 4px solid var(--rc); background: color-mix(in srgb, var(--rc) 6%, var(--surface)); border-radius: 0 8px 8px 0; padding: 8px 12px; min-width: 0; }
+.blk > div { min-width: 0; }
+.blk .rng { font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.blk .rng b { display: block; color: var(--ink); font-weight: 500; }
+.blk .lbl { font-weight: 600; }
+.blk .nm { font: 12.5px var(--f-mono); color: var(--rc); margin-left: 6px; overflow-wrap: anywhere; }
+.blk .desc { font-size: 14px; margin-top: 2px; }
+.blk .uses { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.blk .uses span { font: 11.5px var(--f-mono); color: var(--r-compute); border: 1px dashed color-mix(in srgb, var(--r-compute) 50%, var(--line)); border-radius: 5px; padding: 1px 6px; }
+.subs { list-style: none; margin: 8px 0 0; display: grid; gap: 3px; border-left: 1px solid var(--line); padding-left: 10px; }
+.subs li { font-size: 13px; color: var(--muted); display: grid; grid-template-columns: 82px 1fr; gap: 8px; }
+.subs li span:first-child { font: 11.5px var(--f-mono); }
+.rolekey { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.rolekey i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--rc); vertical-align: -1px; margin-right: 5px; }
+.finds { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.find { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.find b { font-family: var(--f-display); font-size: 16px; }
+.find p { font-size: 14px; color: var(--muted); }
+footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+@media (max-width: 640px) {
+  .blocks { padding-left: 40px; } .blocks svg.arcs { width: 40px; }
+  .blk { grid-template-columns: 1fr; gap: 4px; }
+  .subs li { grid-template-columns: 1fr; gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1 id="title"></h1>
+    <p class="lede" id="lede"></p>
+    <div class="facts" id="facts"></div>
+    <div class="banner" id="banner" hidden></div>
+  </header>
+  <nav class="bar" aria-label="Sections" id="nav"></nav>
+  <section id="overview" hidden><h2>Overview</h2><div id="ov-body" style="display:grid;gap:12px"></div><div class="concepts" id="concepts"></div></section>
+  <section id="flow" hidden>
+    <h2>How information flows</h2>
+    <p class="sub">Rounded boxes are code files, coloured by status; grey boxes are files or folders they write; dashed boxes are inputs nothing in the repo writes. Hover or focus a file to light up only its inputs and outputs; click it to jump to its block diagram. Edges come from paths found in the code, so a path built at runtime from user input can be missing.</p>
+    <div class="legend" id="legend"></div>
+    <div class="frame"><svg id="graph" class="g" role="img" aria-label="Data-flow graph between code files and the files they read and write"></svg></div>
+  </section>
+  <section id="run" hidden><h2>Run order</h2><p class="sub">The order shell scripts invoke things in. Conditional steps run only when a check in the script passes.</p><div class="run" id="run-body"></div></section>
+  <section id="matrix" hidden><h2>Which script uses which package</h2><p class="sub">From each script's imports of code inside this repo.</p><div class="frame" id="mx"></div></section>
+  <section id="files">
+    <h2>File by file</h2>
+    <p class="sub">Each file is drawn as its blocks in file order, covering every line. The coloured edge says what kind of work a block does; red arcs on the left are calls between functions in the same file (caller → callee); dashed violet tags are functions the block uses from elsewhere in the repo. Line ranges, calls and imports come from the syntax tree.</p>
+    <div class="rolekey" id="rolekey"></div>
+    <div class="filters" id="filters" role="group" aria-label="Filter files by status"></div>
+    <div id="groups"></div>
+  </section>
+  <section id="findings" hidden><h2>Things to know before you change anything</h2><div class="finds" id="finds"></div></section>
+  <section id="tests" hidden><h2>Tests</h2><div class="frame" id="tests-t"></div></section>
+  <footer id="foot"></footer>
+</div>
+<script id="map" type="application/json">{"schema":1,"generator":"blockmap 0.1.0","generated_at":"2026-10-07 18:00 UTC","meta":{"repo":"blockmap","ref":"main (working tree)","commit":"","source":"."},"enrichment":{"source":"static","models":{}},"overview":null,"findings":[],"groups":[{"title":"Standalone scripts","blurb":"Scripts that share no files with other scripts.","files":["src/blockmap/cli.py"]},{"title":"src/blockmap/","blurb":"","files":["src/blockmap/__init__.py","src/blockmap/assemble.py","src/blockmap/layout.py","src/blockmap/snapshot.py"],"library":true},{"title":"src/blockmap/analyze/","blurb":"","files":["src/blockmap/analyze/__init__.py","src/blockmap/analyze/python_ast.py","src/blockmap/analyze/repo.py","src/blockmap/analyze/shell.py"],"library":true},{"title":"src/blockmap/enrich/","blurb":"","files":["src/blockmap/enrich/__init__.py","src/blockmap/enrich/heuristic.py","src/blockmap/enrich/llm.py","src/blockmap/enrich/merge.py","src/blockmap/enrich/prompts.py","src/blockmap/enrich/tasks.py"],"library":true},{"title":"src/blockmap/render/","blurb":"","files":["src/blockmap/render/__init__.py","src/blockmap/render/render.py"],"library":true},{"title":"Tests","blurb":"","files":["tests/__init__.py","tests/conftest.py","tests/test_analyze.py","tests/test_llm.py","tests/test_pipeline.py"],"library":true}],"files":{"src/blockmap/__init__.py":{"path":"src/blockmap/__init__.py","kind":"module","lines":6,"status":"dormant","purpose":"blockmap: draw any repo/branch as a data-flow graph plus block-by-block file diagrams.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":6,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false}],"calls":[],"used_by":[],"imports":[],"parse_error":null},"src/blockmap/analyze/__init__.py":{"path":"src/blockmap/analyze/__init__.py","kind":"module","lines":1,"status":"dormant","purpose":"","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":1,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false}],"calls":[],"used_by":[],"imports":[],"parse_error":null},"src/blockmap/analyze/python_ast.py":{"path":"src/blockmap/analyze/python_ast.py","kind":"module","lines":586,"status":"library","purpose":"Static analysis of one Python file: blocks, intra-file calls, imports, file I/O.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":110,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":111,"end":121,"name":"IOHit","type":"class","label":"io hit","desc":"","role":"compute","sub":[],"uses":[],"corrected":false},{"id":2,"start":122,"end":135,"name":"FileFacts","type":"class","label":"file facts","desc":"","role":"compute","sub":[],"uses":[],"corrected":false},{"id":3,"start":136,"end":144,"name":"looks_like_path","type":"def","label":"looks like path","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":4,"start":145,"end":148,"name":"_end","type":"def","label":"end","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":5,"start":149,"end":154,"name":"_first_para","type":"def","label":"first para","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":6,"start":155,"end":163,"name":"_is_main_guard","type":"def","label":"is main guard","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":7,"start":164,"end":200,"name":"_blocks","type":"def","label":"blocks","desc":"Tile the file into contiguous blocks: setup runs, each top-level def/class, the main guard.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":8,"start":201,"end":210,"name":"_names_used","type":"def","label":"names used","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":9,"start":211,"end":282,"name":"_PathEval","type":"class","label":"path eval","desc":"Turn an expression into a path template like 'results/{model}/x.csv', or None.","role":"compute","sub":[],"uses":[],"corrected":false},{"id":10,"start":283,"end":292,"name":"_short","type":"def","label":"short","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":11,"start":293,"end":301,"name":"_callee","type":"def","label":"callee","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":12,"start":302,"end":312,"name":"_callee_owner","type":"def","label":"callee owner","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":13,"start":313,"end":321,"name":"_mode_arg","type":"def","label":"mode arg","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":14,"start":322,"end":351,"name":"_collect_argparse","type":"def","label":"collect argparse","desc":"","role":"load","sub":[],"uses":[],"corrected":false},{"id":15,"start":352,"end":363,"name":"_module_consts","type":"def","label":"module consts","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":16,"start":364,"end":368,"name":null,"type":"setup","label":"module-level constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":17,"start":369,"end":377,"name":"_mode_of","type":"def","label":"mode of","desc":"Mode string for open()/File(); a non-constant mode (append-or-write toggles) counts as write.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":18,"start":378,"end":456,"name":"_classify_calls","type":"def","label":"classify calls","desc":"Find read/write calls in `scope` and pass (path, mode, line, how) to emit.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":19,"start":457,"end":485,"name":"_bind_locals","type":"def","label":"bind locals","desc":"Record local variables that hold paths, in source order.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":20,"start":486,"end":544,"name":"_scan_io","type":"def","label":"scan io","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":21,"start":545,"end":586,"name":"analyze_python","type":"def","label":"analyze python","desc":"","role":"helper","sub":[],"uses":[],"corrected":false}],"calls":[[2,1],[7,4],[7,5],[7,6],[9,10],[9,11],[14,11],[15,3],[15,9],[17,13],[18,9],[18,11],[18,12],[18,17],[19,9],[19,11],[20,1],[20,3],[20,9],[20,18],[20,19],[21,2],[21,5],[21,6],[21,7],[21,8],[21,14],[21,15],[21,20]],"used_by":["src/blockmap/analyze/repo.py","tests/test_analyze.py"],"imports":[],"parse_error":null},"src/blockmap/analyze/repo.py":{"path":"src/blockmap/analyze/repo.py","kind":"module","lines":289,"status":"library","purpose":"Walk a snapshot, analyse every file, and assemble the repo-level map (files, imports, data flow).","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":59,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":60,"end":69,"name":"_kind","type":"def","label":"kind","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":70,"end":81,"name":"_module_index","type":"def","label":"module index","desc":"Map importable dotted names to repo files, with and without a leading src/ layout dir.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":3,"start":82,"end":96,"name":"_resolve_import","type":"def","label":"resolve import","desc":"Return the repo file an import string points at (longest matching module prefix).","role":"compute","sub":[],"uses":[],"corrected":false},{"id":4,"start":97,"end":106,"name":"normalize_path","type":"def","label":"normalize path","desc":"Canonical artifact key: placeholders -> '*', no leading ./, collapse '//'.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":5,"start":107,"end":109,"name":"_is_dirlike","type":"def","label":"is dirlike","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":6,"start":110,"end":114,"name":null,"type":"setup","label":"module-level constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":7,"start":115,"end":216,"name":"build_artifacts","type":"def","label":"build artifacts","desc":"Merge every script's read/write paths into shared artifact nodes and return (artifacts, edges).","role":"compute","sub":[],"uses":[],"corrected":false},{"id":8,"start":217,"end":289,"name":"analyze_repo","type":"def","label":"analyze repo","desc":"","role":"helper","sub":[],"uses":["src/blockmap/analyze/python_ast.py:analyze_python","src/blockmap/analyze/shell.py:analyze_shell"],"corrected":false}],"calls":[[7,4],[7,5],[8,1],[8,2],[8,3],[8,7]],"used_by":["src/blockmap/cli.py","tests/test_analyze.py"],"imports":["src/blockmap/analyze/python_ast.py","src/blockmap/analyze/shell.py"],"parse_error":null},"src/blockmap/analyze/shell.py":{"path":"src/blockmap/analyze/shell.py","kind":"module","lines":70,"status":"library","purpose":"Read shell scripts for the order in which they run Python scripts and other shell scripts.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":13,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":14,"end":59,"name":"analyze_shell","type":"def","label":"analyze shell","desc":"Return the ordered steps a shell script runs, joining backslash-continued lines first.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":60,"end":70,"name":"_inside_if","type":"def","label":"inside if","desc":"","role":"helper","sub":[],"uses":[],"corrected":false}],"calls":[[1,2]],"used_by":["src/blockmap/analyze/repo.py","tests/test_analyze.py"],"imports":[],"parse_error":null},"src/blockmap/assemble.py":{"path":"src/blockmap/assemble.py","kind":"module","lines":174,"status":"library","purpose":"Combine static analysis + enrichment into the single map.json the renderer draws.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":12,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":13,"end":21,"name":"base_enrichment","type":"def","label":"base enrichment","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/heuristic.py:heuristic_file"],"corrected":false},{"id":2,"start":22,"end":25,"name":"_short_label","type":"def","label":"short label","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":3,"start":26,"end":32,"name":"_package_of","type":"def","label":"package of","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":4,"start":33,"end":174,"name":"assemble","type":"def","label":"assemble","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/heuristic.py:heuristic_file","src/blockmap/enrich/heuristic.py:heuristic_groups","src/blockmap/enrich/heuristic.py:heuristic_statuses","src/blockmap/layout.py:layout"],"corrected":false}],"calls":[[4,2],[4,3]],"used_by":["src/blockmap/cli.py","tests/test_pipeline.py"],"imports":["src/blockmap/enrich/heuristic.py","src/blockmap/layout.py"],"parse_error":null},"src/blockmap/cli.py":{"path":"src/blockmap/cli.py","kind":"script","lines":176,"status":"auxiliary","purpose":"Command line: `blockmap build` does everything; the step commands exist for the Claude Code skill.","reads":[],"writes":["{work}/analysis.json","{work}/enrichment.json","{work}/map.json","{work}/meta.json"],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":20,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":21,"end":24,"name":"_log","type":"def","label":"log","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":25,"end":40,"name":"_analyze_into","type":"def","label":"analyze into","desc":"","role":"helper","sub":[],"uses":["src/blockmap/analyze/repo.py:analyze_repo","src/blockmap/assemble.py:base_enrichment","src/blockmap/snapshot.py:take_snapshot"],"corrected":false},{"id":3,"start":41,"end":47,"name":"_load","type":"def","label":"load","desc":"","role":"load","sub":[],"uses":[],"corrected":false},{"id":4,"start":48,"end":57,"name":"_render_to","type":"def","label":"render to","desc":"","role":"plot","sub":[],"uses":["src/blockmap/assemble.py:assemble","src/blockmap/render/render.py:render_html"],"corrected":false},{"id":5,"start":58,"end":80,"name":"_run_api","type":"def","label":"run api","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/llm.py:run_api"],"corrected":false},{"id":6,"start":81,"end":174,"name":"main","type":"def","label":"main","desc":"","role":"entry","sub":[],"uses":["src/blockmap/enrich/tasks.py:collect_answers","src/blockmap/enrich/tasks.py:export_tasks","src/blockmap/enrich/tasks.py:synth_input"],"corrected":false},{"id":7,"start":175,"end":176,"name":"__main__","type":"guard","label":"run as a script","desc":"","role":"entry","sub":[],"uses":[],"corrected":false}],"calls":[[2,1],[4,1],[4,3],[5,1],[5,3],[6,1],[6,2],[6,3],[6,4],[6,5],[7,6]],"used_by":["tests/test_llm.py","tests/test_pipeline.py"],"imports":["src/blockmap/analyze/repo.py","src/blockmap/assemble.py","src/blockmap/enrich/llm.py","src/blockmap/enrich/tasks.py","src/blockmap/render/render.py","src/blockmap/snapshot.py"],"parse_error":null},"src/blockmap/enrich/__init__.py":{"path":"src/blockmap/enrich/__init__.py","kind":"module","lines":1,"status":"dormant","purpose":"","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":1,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false}],"calls":[],"used_by":[],"imports":[],"parse_error":null},"src/blockmap/enrich/heuristic.py":{"path":"src/blockmap/enrich/heuristic.py","kind":"module","lines":117,"status":"library","purpose":"LLM-free labels, roles, statuses and groups, so a map is complete even without an API key.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":17,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":18,"end":22,"name":"humanize","type":"def","label":"humanize","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":23,"end":34,"name":"block_role","type":"def","label":"block role","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":3,"start":35,"end":52,"name":"heuristic_file","type":"def","label":"heuristic file","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":4,"start":53,"end":70,"name":"heuristic_statuses","type":"def","label":"heuristic statuses","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":5,"start":71,"end":117,"name":"heuristic_groups","type":"def","label":"heuristic groups","desc":"Scripts: connected components of the data-flow graph. Modules: by package directory.","role":"helper","sub":[],"uses":[],"corrected":false}],"calls":[[3,1],[3,2]],"used_by":["src/blockmap/assemble.py"],"imports":[],"parse_error":null},"src/blockmap/enrich/llm.py":{"path":"src/blockmap/enrich/llm.py","kind":"module","lines":185,"status":"library","purpose":"Run the describe -> verify -> synthesize stages against the Claude API.","reads":["{cache}/{key_stage_model_PROMPT_V}.json"],"writes":["{cache}/{key_stage_model_PROMPT_V}.json"],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":39,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":40,"end":48,"name":"cache_dir","type":"def","label":"cache dir","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":49,"end":52,"name":"_key","type":"def","label":"key","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":3,"start":53,"end":169,"name":"Runner","type":"class","label":"runner","desc":"","role":"compute","sub":[],"uses":["src/blockmap/enrich/merge.py:apply_describe","src/blockmap/enrich/merge.py:apply_verify","src/blockmap/enrich/merge.py:clean_synth","src/blockmap/enrich/prompts.py:DESCRIBE_SCHEMA","src/blockmap/enrich/prompts.py:DESCRIBE_SYSTEM","src/blockmap/enrich/prompts.py:PROMPT_VERSION","src/blockmap/enrich/prompts.py:SYNTH_SCHEMA","src/blockmap/enrich/prompts.py:SYNTH_SYSTEM","src/blockmap/enrich/prompts.py:VERIFY_SCHEMA","src/blockmap/enrich/prompts.py:VERIFY_SYSTEM","src/blockmap/enrich/prompts.py:describe_user","src/blockmap/enrich/prompts.py:repo_context","src/blockmap/enrich/prompts.py:synth_user","src/blockmap/enrich/prompts.py:verify_user"],"corrected":false},{"id":4,"start":170,"end":185,"name":"run_api","type":"def","label":"run api","desc":"","role":"helper","sub":[],"uses":[],"corrected":false}],"calls":[[3,1],[3,2],[4,3]],"used_by":["src/blockmap/cli.py"],"imports":["src/blockmap/enrich/merge.py","src/blockmap/enrich/prompts.py"],"parse_error":null},"src/blockmap/enrich/merge.py":{"path":"src/blockmap/enrich/merge.py","kind":"module","lines":85,"status":"library","purpose":"Fold model answers into the enrichment record, rejecting anything that does not fit the code.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":7,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":8,"end":15,"name":"_subs_ok","type":"def","label":"subs ok","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":16,"end":45,"name":"apply_describe","type":"def","label":"apply describe","desc":"Merge a describe answer into `cur` (a heuristic_file record). Returns warnings.","role":"helper","sub":[],"uses":["src/blockmap/enrich/prompts.py:ROLES"],"corrected":false},{"id":3,"start":46,"end":66,"name":"apply_verify","type":"def","label":"apply verify","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/prompts.py:ROLES"],"corrected":false},{"id":4,"start":67,"end":85,"name":"clean_synth","type":"def","label":"clean synth","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/prompts.py:STATUSES"],"corrected":false}],"calls":[[2,1]],"used_by":["src/blockmap/enrich/llm.py","src/blockmap/enrich/tasks.py","tests/test_pipeline.py"],"imports":["src/blockmap/enrich/prompts.py"],"parse_error":null},"src/blockmap/enrich/prompts.py":{"path":"src/blockmap/enrich/prompts.py","kind":"module","lines":185,"status":"library","purpose":"Prompts and JSON schemas shared by the API runner and the Claude Code skill path.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":62,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":63,"end":64,"name":"_obj","type":"def","label":"obj","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":65,"end":126,"name":null,"type":"setup","label":"module-level constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":3,"start":127,"end":137,"name":"repo_context","type":"def","label":"repo context","desc":"Shared, stable prefix for every per-file call (cacheable): the repo's file list with one-line docstrings.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":4,"start":138,"end":141,"name":"numbered","type":"def","label":"numbered","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":5,"start":142,"end":151,"name":"describe_user","type":"def","label":"describe user","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":6,"start":152,"end":155,"name":"verify_user","type":"def","label":"verify user","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":7,"start":156,"end":185,"name":"synth_user","type":"def","label":"synth user","desc":"","role":"helper","sub":[],"uses":[],"corrected":false}],"calls":[[5,4],[6,5]],"used_by":["src/blockmap/enrich/llm.py","src/blockmap/enrich/merge.py","src/blockmap/enrich/tasks.py"],"imports":[],"parse_error":null},"src/blockmap/enrich/tasks.py":{"path":"src/blockmap/enrich/tasks.py","kind":"module","lines":134,"status":"library","purpose":"Export the describe/verify/synthesize prompts as files and import the answers back.","reads":["{out}/synth.json"],"writes":["{out}/CONTEXT.md","{out}/SYNTH.md","{out}/VERIFY.md","{out}/describe_{i_02d}/TASK.md","{out}/index.json"],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":27,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":28,"end":31,"name":"_safe","type":"def","label":"safe","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":32,"end":97,"name":"export_tasks","type":"def","label":"export tasks","desc":"Write describe tasks in batches of roughly `batch_lines` source lines each.","role":"save","sub":[],"uses":["src/blockmap/enrich/prompts.py:DESCRIBE_SCHEMA","src/blockmap/enrich/prompts.py:DESCRIBE_SYSTEM","src/blockmap/enrich/prompts.py:SYNTH_SCHEMA","src/blockmap/enrich/prompts.py:SYNTH_SYSTEM","src/blockmap/enrich/prompts.py:VERIFY_SCHEMA","src/blockmap/enrich/prompts.py:VERIFY_SYSTEM","src/blockmap/enrich/prompts.py:describe_user","src/blockmap/enrich/prompts.py:repo_context"],"corrected":false},{"id":3,"start":98,"end":131,"name":"collect_answers","type":"def","label":"collect answers","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/merge.py:apply_describe","src/blockmap/enrich/merge.py:apply_verify","src/blockmap/enrich/merge.py:clean_synth"],"corrected":false},{"id":4,"start":132,"end":134,"name":"synth_input","type":"def","label":"synth input","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/prompts.py:synth_user"],"corrected":false}],"calls":[[2,1],[3,1]],"used_by":["src/blockmap/cli.py"],"imports":["src/blockmap/enrich/merge.py","src/blockmap/enrich/prompts.py"],"parse_error":null},"src/blockmap/layout.py":{"path":"src/blockmap/layout.py","kind":"module","lines":159,"status":"library","purpose":"Layered layout for the data-flow graph: rows by pipeline depth, columns by lane.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":22,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":23,"end":26,"name":"node_width","type":"def","label":"node width","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":27,"end":54,"name":"_acyclic","type":"def","label":"acyclic","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":3,"start":55,"end":159,"name":"layout","type":"def","label":"layout","desc":"nodes: [{id, label, lane}] -> adds x, y (centers), w; returns {nodes, lanes, width, height}.","role":"helper","sub":[],"uses":[],"corrected":false}],"calls":[[3,1],[3,2]],"used_by":["src/blockmap/assemble.py","tests/test_pipeline.py"],"imports":[],"parse_error":null},"src/blockmap/render/__init__.py":{"path":"src/blockmap/render/__init__.py","kind":"module","lines":1,"status":"dormant","purpose":"","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":1,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false}],"calls":[],"used_by":[],"imports":[],"parse_error":null},"src/blockmap/render/render.py":{"path":"src/blockmap/render/render.py","kind":"module","lines":20,"status":"library","purpose":"Inject a map into the single-file HTML template.","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":11,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":12,"end":20,"name":"render_html","type":"def","label":"render html","desc":"","role":"plot","sub":[],"uses":[],"corrected":false}],"calls":[],"used_by":["src/blockmap/cli.py","tests/test_pipeline.py"],"imports":[],"parse_error":null},"src/blockmap/snapshot.py":{"path":"src/blockmap/snapshot.py","kind":"module","lines":81,"status":"library","purpose":"Materialise one ref of a git repo (local path or URL) into a scratch directory.","reads":["{base}/clone.git"],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":12,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":13,"end":24,"name":"Snapshot","type":"class","label":"snapshot","desc":"","role":"compute","sub":[],"uses":[],"corrected":false},{"id":2,"start":25,"end":29,"name":"_git","type":"def","label":"git","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":3,"start":30,"end":33,"name":"_is_url","type":"def","label":"is url","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":4,"start":34,"end":44,"name":"_copy_worktree","type":"def","label":"copy worktree","desc":"Copy tracked + untracked-but-not-ignored files, i.e. what `git status` would consider.","role":"helper","sub":[],"uses":[],"corrected":false},{"id":5,"start":45,"end":81,"name":"take_snapshot","type":"def","label":"take snapshot","desc":"Export `ref` (default: the repo's current HEAD) without touching the source checkout.","role":"helper","sub":[],"uses":[],"corrected":false}],"calls":[[4,2],[5,1],[5,2],[5,3],[5,4]],"used_by":["src/blockmap/cli.py","tests/test_analyze.py"],"imports":[],"parse_error":null},"tests/__init__.py":{"path":"tests/__init__.py","kind":"test","lines":1,"status":"test","purpose":"","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":1,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false}],"calls":[],"used_by":[],"imports":[],"parse_error":null},"tests/conftest.py":{"path":"tests/conftest.py","kind":"test","lines":114,"status":"test","purpose":"","reads":[],"writes":["{tmp_path}/toy/{rel}"],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":93,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":94,"end":114,"name":"toy_repo","type":"def","label":"toy repo","desc":"","role":"helper","sub":[],"uses":[],"corrected":false}],"calls":[],"used_by":["tests/test_analyze.py"],"imports":[],"parse_error":null},"tests/test_analyze.py":{"path":"tests/test_analyze.py","kind":"test","lines":98,"status":"test","purpose":"","reads":[],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":10,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":11,"end":17,"name":"_tiles","type":"def","label":"tiles","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":2,"start":18,"end":26,"name":"test_blocks_tile_the_file_and_calls_point_at_callees","type":"def","label":"test blocks tile the file and calls point at callees","desc":"","role":"helper","sub":[],"uses":["src/blockmap/analyze/python_ast.py:analyze_python","tests/conftest.py:PIPE_EXTRACT"],"corrected":false},{"id":3,"start":27,"end":36,"name":"test_io_follows_paths_into_helpers_and_cli_defaults","type":"def","label":"test io follows paths into helpers and cli defaults","desc":"","role":"save","sub":[],"uses":["src/blockmap/analyze/python_ast.py:analyze_python","tests/conftest.py:PIPE_EXTRACT","tests/conftest.py:PIPE_FIT"],"corrected":false},{"id":4,"start":37,"end":44,"name":"test_nonconstant_open_mode_counts_as_write_and_hf_ids_are_sources","type":"def","label":"test nonconstant open mode counts as write and hf ids are sources","desc":"","role":"save","sub":[],"uses":["src/blockmap/analyze/python_ast.py:analyze_python"],"corrected":false},{"id":5,"start":45,"end":49,"name":"test_syntax_error_still_gives_one_block","type":"def","label":"test syntax error still gives one block","desc":"","role":"helper","sub":[],"uses":["src/blockmap/analyze/python_ast.py:analyze_python"],"corrected":false},{"id":6,"start":50,"end":58,"name":"test_shell_steps_in_order_with_continuations_and_conditionals","type":"def","label":"test shell steps in order with continuations and conditionals","desc":"","role":"compute","sub":[],"uses":["src/blockmap/analyze/shell.py:analyze_shell","tests/conftest.py:RUN"],"corrected":false},{"id":7,"start":59,"end":75,"name":"test_artifacts_connect_writer_to_reader_and_ignore_mkdir","type":"def","label":"test artifacts connect writer to reader and ignore mkdir","desc":"","role":"save","sub":[],"uses":["src/blockmap/analyze/repo.py:build_artifacts"],"corrected":false},{"id":8,"start":76,"end":86,"name":"test_containers_do_not_merge_distinct_files","type":"def","label":"test containers do not merge distinct files","desc":"","role":"helper","sub":[],"uses":["src/blockmap/analyze/repo.py:build_artifacts"],"corrected":false},{"id":9,"start":87,"end":98,"name":"test_repo_analysis_end_to_end","type":"def","label":"test repo analysis end to end","desc":"","role":"save","sub":[],"uses":["src/blockmap/analyze/repo.py:analyze_repo","src/blockmap/snapshot.py:take_snapshot"],"corrected":false}],"calls":[[2,1]],"used_by":[],"imports":["src/blockmap/analyze/python_ast.py","src/blockmap/analyze/repo.py","src/blockmap/analyze/shell.py","src/blockmap/snapshot.py","tests/conftest.py"],"parse_error":null},"tests/test_llm.py":{"path":"tests/test_llm.py","kind":"test","lines":73,"status":"test","purpose":"The API path against a fake client: request shape, merging, caching. No network.","reads":["{tmp_path}/w/map.json"],"writes":[],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":12,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":13,"end":46,"name":"FakeMessages","type":"class","label":"fake messages","desc":"","role":"compute","sub":[],"uses":[],"corrected":false},{"id":2,"start":47,"end":52,"name":"FakeClient","type":"class","label":"fake client","desc":"","role":"compute","sub":[],"uses":[],"corrected":false},{"id":3,"start":53,"end":73,"name":"test_api_path_shapes_requests_and_caches","type":"def","label":"test api path shapes requests and caches","desc":"","role":"helper","sub":[],"uses":["src/blockmap/cli.py:main"],"corrected":false}],"calls":[[2,1],[3,2]],"used_by":[],"imports":["src/blockmap/cli.py"],"parse_error":null},"tests/test_pipeline.py":{"path":"tests/test_pipeline.py","kind":"test","lines":190,"status":"test","purpose":"","reads":["{tmp_path}/map.html","{tmp_path}/w/analysis.json","{tmp_path}/w/map.json","{tmp_path}/w/tasks/index.json","{tmp_path}/w/tasks/{idx_describe_0_dir_.rspl}/TASK.md","{tmp_path}/w/{f}"],"writes":["{tmp_path}/w/tasks/synth.json","{tmp_path}/w/tasks/{idx_describe_0_dir_.rspl}/scripts__02_fit.py.json"],"notes":[],"verified":false,"blocks":[{"id":0,"start":1,"end":12,"name":null,"type":"setup","label":"imports & constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":1,"start":13,"end":26,"name":"test_layout_has_no_overlaps_and_wraps_wide_rows","type":"def","label":"test layout has no overlaps and wraps wide rows","desc":"","role":"helper","sub":[],"uses":["src/blockmap/layout.py:layout"],"corrected":false},{"id":2,"start":27,"end":30,"name":"test_layout_survives_cycles","type":"def","label":"test layout survives cycles","desc":"","role":"helper","sub":[],"uses":["src/blockmap/layout.py:layout"],"corrected":false},{"id":3,"start":31,"end":40,"name":null,"type":"setup","label":"module-level constants","desc":"","role":"setup","sub":[],"uses":[],"corrected":false},{"id":4,"start":41,"end":52,"name":"_cur","type":"def","label":"cur","desc":"","role":"helper","sub":[],"uses":[],"corrected":false},{"id":5,"start":53,"end":77,"name":"test_describe_rejects_phases_that_do_not_tile","type":"def","label":"test describe rejects phases that do not tile","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/merge.py:apply_describe"],"corrected":false},{"id":6,"start":78,"end":115,"name":"test_describe_accepts_tiling_phases_and_verify_overrides","type":"def","label":"test describe accepts tiling phases and verify overrides","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/merge.py:apply_describe","src/blockmap/enrich/merge.py:apply_verify"],"corrected":false},{"id":7,"start":116,"end":129,"name":"test_synth_drops_unknown_files_and_duplicates","type":"def","label":"test synth drops unknown files and duplicates","desc":"","role":"helper","sub":[],"uses":["src/blockmap/enrich/merge.py:clean_synth"],"corrected":false},{"id":8,"start":130,"end":143,"name":"test_render_escapes_script_breakouts","type":"def","label":"test render escapes script breakouts","desc":"","role":"plot","sub":[],"uses":["src/blockmap/assemble.py:assemble","src/blockmap/assemble.py:base_enrichment","src/blockmap/cli.py:main","src/blockmap/render/render.py:render_html"],"corrected":false},{"id":9,"start":144,"end":153,"name":"test_cli_build_static","type":"def","label":"test cli build static","desc":"","role":"compute","sub":[],"uses":["src/blockmap/cli.py:main"],"corrected":false},{"id":10,"start":154,"end":190,"name":"test_skill_round_trip_tasks_then_apply","type":"def","label":"test skill round trip tasks then apply","desc":"","role":"helper","sub":[],"uses":["src/blockmap/cli.py:main"],"corrected":false}],"calls":[[5,4],[6,4]],"used_by":[],"imports":["src/blockmap/assemble.py","src/blockmap/cli.py","src/blockmap/enrich/merge.py","src/blockmap/layout.py","src/blockmap/render/render.py"],"parse_error":null}},"graph":{"nodes":[],"lanes":[],"width":0,"height":0,"edges":[]},"matrix":{"packages":["blockmap","src/blockmap/analyze","src/blockmap/enrich","src/blockmap/render"],"rows":[{"file":"src/blockmap/cli.py","uses":["blockmap","src/blockmap/analyze","src/blockmap/enrich","src/blockmap/render"]}]},"run_order":[],"tests":[{"file":"tests/__init__.py","tests":[]},{"file":"tests/conftest.py","tests":[]},{"file":"tests/test_analyze.py","tests":["test_blocks_tile_the_file_and_calls_point_at_callees","test_io_follows_paths_into_helpers_and_cli_defaults","test_nonconstant_open_mode_counts_as_write_and_hf_ids_are_sources","test_syntax_error_still_gives_one_block","test_shell_steps_in_order_with_continuations_and_conditionals","test_artifacts_connect_writer_to_reader_and_ignore_mkdir","test_containers_do_not_merge_distinct_files","test_repo_analysis_end_to_end"]},{"file":"tests/test_llm.py","tests":["test_api_path_shapes_requests_and_caches"]},{"file":"tests/test_pipeline.py","tests":["test_layout_has_no_overlaps_and_wraps_wide_rows","test_layout_survives_cycles","test_describe_rejects_phases_that_do_not_tile","test_describe_accepts_tiling_phases_and_verify_overrides","test_synth_drops_unknown_files_and_duplicates","test_render_escapes_script_breakouts","test_cli_build_static","test_skill_round_trip_tasks_then_apply"]}],"other_files":[]}</script>
+<script>
+(() => {
+const M = JSON.parse(document.getElementById('map').textContent);
+const F = M.files;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const md = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+const ROLE = { setup: 'docstring / imports / constants', helper: 'small helper', load: 'reads data', compute: 'core logic', save: 'writes output', plot: 'draws figures / UI', entry: 'entry point' };
+const STATUS = { core: 'core', auxiliary: 'auxiliary', dormant: 'unused / off path', library: 'library', test: 'test' };
+const fid = p => 'f-' + p.replace(/[^a-z0-9]+/gi, '-');
+const show = id => { document.getElementById(id).hidden = false; };
+const navItems = [];
+
+/* hero */
+const meta = M.meta, ov = M.overview || {};
+$('#eyebrow').textContent = `${meta.repo} · ${meta.ref} · ${meta.commit ? meta.commit.slice(0, 10) : 'uncommitted'}`;
+$('#title').textContent = ov.title || meta.repo;
+$('#lede').innerHTML = md(ov.tagline || 'Structural map: blocks, calls, imports and data flow computed from the code.');
+const paths = Object.keys(F);
+const kinds = k => paths.filter(p => F[p].kind === k).length;
+const lines = paths.reduce((a, p) => a + F[p].lines, 0);
+$('#facts').innerHTML = [[kinds('script'), 'scripts'], [kinds('module'), 'modules'], [kinds('test'), 'test files'],
+  [lines.toLocaleString(), 'Python lines'], [M.graph.nodes.filter(n => n.kind !== 'script').length, 'data artifacts'],
+  [M.other_files.length, 'other code files (not drawn)']].filter(x => x[0]).map(([b, t]) => `<span><b>${b}</b> ${t}</span>`).join('');
+if (M.enrichment.source === 'static') {
+  const b = $('#banner'); b.hidden = false;
+  b.textContent = 'Labels below come from function names and docstrings. Run with --llm api (or the Claude Code skill) for written descriptions, groups and findings.';
+}
+
+/* overview */
+if (ov.overview && ov.overview.length) {
+  show('overview'); navItems.push(['overview', 'Overview']);
+  $('#ov-body').innerHTML = ov.overview.map(p => `<p>${md(p)}</p>`).join('');
+  $('#concepts').innerHTML = (ov.concepts || []).map(c => `<div><b>${esc(c.term)}</b><span>${md(c.meaning)}</span></div>`).join('');
+}
+
+/* graph */
+const G = M.graph;
+if (G.nodes.length) {
+  show('flow'); navItems.push(['flow', 'Data flow']);
+  $('#legend').innerHTML = Object.keys(STATUS).map(s => `<span><span class="sw" style="border-color:var(--s-${s})"></span>${STATUS[s]}</span>`).join('') +
+    '<span><span class="sw" style="border-color:var(--line);background:var(--surface-2)"></span>file written by the repo</span>' +
+    '<span><span class="sw" style="border-color:var(--accent);border-style:dashed"></span>external input</span>';
+  const NS = 'http://www.w3.org/2000/svg', svg = $('#graph');
+  const W = G.width, H = G.height;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
+  const meas = document.createElement('canvas').getContext('2d');
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+  function draw() {
+    svg.innerHTML = '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>';
+    G.lanes.forEach(l => {
+      el('rect', { x: l.x0, y: 8, width: l.x1 - l.x0, height: H - 16, rx: 10, class: 'lane' }, svg);
+      el('text', { x: l.x0 + 10, y: 26, class: 'lane-lbl' }, svg).textContent = l.title.toUpperCase();
+    });
+    const eg = el('g', {}, svg), ng = el('g', {}, svg), geo = {};
+    G.nodes.forEach(n => {
+      const mono = n.kind !== 'source';
+      meas.font = `${n.kind === 'script' ? 500 : 400} 11.5px ${mono ? '"IBM Plex Mono", monospace' : '"IBM Plex Sans", sans-serif'}`;
+      const ls = n.label.split('\n');
+      const w = Math.max(...ls.map(s => meas.measureText(s).width)) + 20, h = 14 * ls.length + 12;
+      geo[n.id] = { x: n.x - w / 2, y: n.y - h / 2, w, h, cx: n.x, cy: n.y };
+      const g = el('g', { class: `node ${n.kind}`, 'data-id': n.id }, ng);
+      const r = el('rect', { x: geo[n.id].x, y: geo[n.id].y, width: w, height: h, rx: n.kind === 'script' ? 9 : 4 }, g);
+      if (n.kind === 'script') r.setAttribute('style', `stroke:var(--s-${n.status})`);
+      ls.forEach((s, i) => { const t = el('text', { x: n.x, y: geo[n.id].y + 17 + i * 14, 'text-anchor': 'middle' }, g); if (mono) t.setAttribute('class', 'mono'); if (n.kind === 'script') t.setAttribute('font-weight', '500'); t.textContent = s; });
+      const tip = el('title', {}, g); tip.textContent = n.kind === 'script' ? n.file : `${n.label.replace('\n', '')}\nwritten by: ${(n.writers || []).join(', ') || '(nothing in repo)'}\nread by: ${(n.readers || []).join(', ') || '—'}`;
+      if (n.kind === 'script') {
+        g.setAttribute('tabindex', '0'); g.setAttribute('role', 'link'); g.setAttribute('aria-label', `${n.file}: jump to block diagram`);
+        const go = () => { const t = document.getElementById(fid(n.file)); if (t) { t.open = true; t.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
+        g.addEventListener('click', go); g.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+      }
+    });
+    G.edges.forEach(([a, b]) => {
+      const A = geo[a], B = geo[b]; if (!A || !B) return;
+      let d;
+      if (Math.abs(A.cy - B.cy) < 4) { const right = A.cx < B.cx; d = right ? `M${A.x + A.w},${A.cy} L${B.x - 2},${B.cy}` : `M${A.x},${A.cy} L${B.x + B.w + 2},${B.cy}`; }
+      else { const down = B.cy > A.cy, y1 = down ? A.y + A.h : A.y, y2 = down ? B.y - 2 : B.y + B.h + 2, m = (y1 + y2) / 2; d = `M${A.cx},${y1} C${A.cx},${m} ${B.cx},${m} ${B.cx},${y2}`; }
+      el('path', { d, class: 'edge', 'marker-end': 'url(#ah)', 'data-a': a, 'data-b': b }, eg);
+    });
+    const focus = id => { svg.classList.add('hovering'); const on = new Set([id]);
+      svg.querySelectorAll('.edge').forEach(p => { const hit = p.dataset.a === id || p.dataset.b === id; p.classList.toggle('on', hit); if (hit) { on.add(p.dataset.a); on.add(p.dataset.b); } });
+      svg.querySelectorAll('.node').forEach(g => g.classList.toggle('on', on.has(g.dataset.id))); };
+    const clear = () => { svg.classList.remove('hovering'); svg.querySelectorAll('.on').forEach(e => e.classList.remove('on')); };
+    svg.querySelectorAll('.node').forEach(g => { g.addEventListener('mouseenter', () => focus(g.dataset.id)); g.addEventListener('mouseleave', clear); g.addEventListener('focus', () => focus(g.dataset.id)); g.addEventListener('blur', clear); });
+  }
+  draw(); document.fonts && document.fonts.ready.then(draw);
+}
+
+/* run order */
+if (M.run_order.length) {
+  show('run'); navItems.push(['run', 'Run order']);
+  $('#run-body').innerHTML = M.run_order.map(sh => `<h3><code>${esc(sh.path)}</code></h3><ol class="steps">${sh.steps.map(st => {
+    const link = st.file && F[st.file] ? `<a href="#${fid(st.file)}"><code>${esc(st.target)}</code></a>` : `<code>${esc(st.target)}</code>`;
+    return `<li><div>${link}${st.conditional ? '<span class="tag">conditional</span>' : ''}${st.kind === 'shell' ? '<span class="tag">shell</span>' : ''}
+      ${st.note ? `<div class="sub">${esc(st.note)}</div>` : ''}${st.args ? `<div class="sub"><code>${esc(st.args)}</code></div>` : ''}</div></li>`;
+  }).join('')}</ol>`).join('');
+}
+
+/* matrix */
+if (M.matrix.packages.length && M.matrix.rows.some(r => r.uses.length)) {
+  show('matrix'); navItems.push(['matrix', 'Who uses what']);
+  $('#mx').innerHTML = `<table class="t"><thead><tr><th>script</th>${M.matrix.packages.map(p => `<th>${esc(p)}</th>`).join('')}</tr></thead><tbody>${
+    M.matrix.rows.map(r => `<tr><td><a href="#${fid(r.file)}">${esc(r.file)}</a></td>${M.matrix.packages.map(p => `<td>${r.uses.includes(p) ? `<span class="dot" title="imports ${esc(p)}"></span>` : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+/* file cards */
+navItems.push(['files', 'Files']);
+$('#rolekey').innerHTML = Object.entries(ROLE).map(([r, n]) => `<span style="--rc:var(--r-${r})"><i></i>${n}</span>`).join('') +
+  '<span><svg width="26" height="14" aria-hidden="true" style="vertical-align:-2px"><path d="M24,2 C6,2 6,12 24,12" fill="none" stroke="var(--call)" stroke-width="1.4"/></svg> calls</span>';
+function card(path) {
+  const f = F[path];
+  const chips = (arr, cls) => arr.map(x => `<span class="chip ${cls}">${esc(x)}</span>`).join('');
+  const links = arr => arr.map(x => F[x] ? `<a class="chip" href="#${fid(x)}">${esc(x)}</a>` : `<span class="chip">${esc(x)}</span>`).join('');
+  const blocks = f.blocks.map(b => {
+    const nm = b.type === 'guard' ? 'if __name__ == "__main__"' : b.name ? (b.type === 'class' ? 'class ' + b.name : b.name + '()') : '';
+    const subs = (b.sub || []).map(s => `<li><span>L${s.start}–${s.end}</span><span>${esc(s.label)}</span></li>`).join('');
+    const uses = (b.uses || []).map(u => { const [file, name] = u.split(':'); return `<span title="${esc(file)}">→ ${esc(name)}</span>`; }).join('');
+    return `<div class="blk" style="--rc:var(--r-${esc(b.role)})"><div class="rng"><b>L${b.start}–${b.end}</b>${b.end - b.start + 1} lines</div>
+      <div><span class="lbl">${esc(b.label || nm || 'module header')}</span>${nm ? `<span class="nm">${esc(nm)}</span>` : ''}
+      ${b.desc ? `<div class="desc">${md(b.desc)}</div>` : ''}${uses ? `<div class="uses">${uses}</div>` : ''}${subs ? `<ul class="subs">${subs}</ul>` : ''}</div></div>`;
+  }).join('');
+  const d = document.createElement('details');
+  d.className = 'file'; d.id = fid(path); d.open = f.kind !== 'test'; d.dataset.status = f.status;
+  d.innerHTML = `<summary><div class="f-top"><span class="f-name">${esc(path)}</span><span class="pill" style="--sc:var(--s-${esc(f.status)})">${esc(STATUS[f.status] || f.status)}</span>
+    <span class="f-meta">${f.lines} lines · ${f.blocks.length} blocks${f.verified ? ' · reviewed' : ''}</span></div>${f.purpose ? `<div class="f-purpose">${md(f.purpose)}</div>` : ''}</summary>
+    <div class="f-body">
+      ${f.parse_error ? `<div class="banner">Could not parse: ${esc(f.parse_error)}</div>` : ''}
+      ${f.reads.length ? `<div class="io-row"><span class="io-k">READS</span>${chips(f.reads, 'in')}</div>` : ''}
+      ${f.writes.length ? `<div class="io-row"><span class="io-k">WRITES</span>${chips(f.writes, 'out')}</div>` : ''}
+      ${f.imports.length ? `<div class="io-row"><span class="io-k">IMPORTS</span>${links(f.imports)}</div>` : ''}
+      ${f.used_by.length ? `<div class="io-row"><span class="io-k">USED BY</span>${links(f.used_by)}</div>` : ''}
+      ${f.notes.length ? `<div><div class="notes-h">REVIEWER NOTES</div><ul class="notes">${f.notes.map(n => `<li>${md(n)}</li>`).join('')}</ul></div>` : ''}
+      <div class="blocks" data-path="${esc(path)}"><svg class="arcs" aria-hidden="true"></svg>${blocks}</div></div>`;
+  return d;
+}
+function arcs(box) {
+  const f = F[box.dataset.path], svg = box.querySelector('svg.arcs'), rows = [...box.querySelectorAll('.blk')];
+  if (!rows.length || !box.offsetParent) return;
+  const top0 = box.getBoundingClientRect().top, W = svg.getBoundingClientRect().width, right = W - 4;
+  const pos = rows.map(r => { const b = r.getBoundingClientRect(); return { top: b.top - top0, h: b.height }; });
+  const calls = f.calls.filter(([a, b]) => pos[a] && pos[b]).sort((p, q) => Math.abs(p[0] - p[1]) - Math.abs(q[0] - q[1]));
+  const maxSpan = Math.max(1, ...calls.map(([a, b]) => Math.abs(a - b)));
+  const nOut = {}, nIn = {}, iOut = {}, iIn = {};
+  calls.forEach(([a, b]) => { nOut[a] = (nOut[a] || 0) + 1; nIn[b] = (nIn[b] || 0) + 1; });
+  let d = '';
+  calls.forEach(([a, b]) => {
+    iOut[a] = (iOut[a] || 0) + 1; iIn[b] = (iIn[b] || 0) + 1;
+    const ya = pos[a].top + pos[a].h * (iOut[a] / (nOut[a] + 1)), yb = pos[b].top + Math.min(pos[b].h - 6, 10 + 6 * (iIn[b] - 1));
+    const x = right - 14 - (Math.abs(a - b) / maxSpan) * (W - 26);
+    d += `M${right},${ya.toFixed(1)} C${x},${ya.toFixed(1)} ${x},${yb.toFixed(1)} ${right},${yb.toFixed(1)} M${right - 6},${(yb - 3.5).toFixed(1)} L${right},${yb.toFixed(1)} L${right - 6},${(yb + 3.5).toFixed(1)} `;
+  });
+  svg.innerHTML = d ? `<path d="${d}"/>` : '';
+}
+const host = $('#groups');
+M.groups.forEach(g => {
+  const h = document.createElement('div'); h.className = 'group-h'; h.dataset.group = g.title;
+  h.innerHTML = `<h3>${esc(g.title)}</h3>${g.blurb ? `<p>${md(g.blurb)}</p>` : ''}`; host.appendChild(h);
+  g.files.forEach(p => { if (F[p]) { const c = card(p); c.dataset.group = g.title; host.appendChild(c); } });
+});
+const ro = new ResizeObserver(es => es.forEach(e => arcs(e.target)));
+document.querySelectorAll('.blocks').forEach(b => ro.observe(b));
+document.querySelectorAll('details.file').forEach(d => d.addEventListener('toggle', () => d.open && arcs(d.querySelector('.blocks'))));
+document.fonts && document.fonts.ready.then(() => document.querySelectorAll('.blocks').forEach(arcs));
+const present = Object.keys(STATUS).filter(s => paths.some(p => F[p].status === s));
+const fb = $('#filters');
+fb.innerHTML = [['all', 'All'], ...present.map(s => [s, STATUS[s]])].map(([k, t], i) => `<button type="button" id="flt-${k}" data-k="${k}" aria-pressed="${i === 0}">${esc(t)}</button>`).join('');
+fb.addEventListener('click', e => {
+  const k = e.target.dataset.k; if (!k) return;
+  fb.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === k)));
+  host.querySelectorAll('details.file').forEach(c => { c.hidden = !(k === 'all' || c.dataset.status === k); });
+  host.querySelectorAll('.group-h').forEach(h => { h.hidden = ![...host.querySelectorAll('details.file')].some(c => c.dataset.group === h.dataset.group && !c.hidden); });
+  host.querySelectorAll('.blocks').forEach(arcs);
+});
+
+/* findings */
+if (M.findings.length) {
+  show('findings'); navItems.push(['findings', 'Things to know']);
+  $('#finds').innerHTML = M.findings.map(f => `<div class="find"><b>${esc(f.title)}</b><p>${md(f.detail)}</p></div>`).join('');
+}
+/* tests */
+if (M.tests.length) {
+  show('tests'); navItems.push(['tests', 'Tests']);
+  $('#tests-t').innerHTML = `<table class="t"><thead><tr><th>file</th><th style="text-align:left">tests</th></tr></thead><tbody>${
+    M.tests.map(t => `<tr><td><a href="#${fid(t.file)}">${esc(t.file)}</a></td><td class="wrap">${t.tests.map(x => `<code>${esc(x)}</code>`).join(' ')}</td></tr>`).join('')}</tbody></table>`;
+}
+$('#nav').innerHTML = navItems.map(([id, t]) => `<a href="#${id}">${t}</a>`).join('');
+const models = M.enrichment.models || {};
+$('#foot').innerHTML = `<div>Generated by ${esc(M.generator)} on ${esc(M.generated_at)} from <code>${esc(meta.source)}</code> at ${meta.commit ? `<code>${esc(meta.commit)}</code>` : 'the working tree (uncommitted)'}.</div>
+  <div>Structure (blocks, line ranges, calls, imports, data paths) is computed from the code. ${M.enrichment.source === 'static' ? 'Text comes from names and docstrings.' :
+  `Descriptions written by ${esc(models.worker || 'agents')}${models.judge ? `, reviewed and summarised by ${esc(models.judge)}` : ''}; check anything important against the code.`}</div>`;
+})();
+</script>
+</body>
+</html>
